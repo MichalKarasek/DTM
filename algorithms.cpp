@@ -575,7 +575,7 @@ int Algorithms::getRayPos(QPoint3D &q, std::vector<QPoint3D> &pol, bool closed){
     return k%2;
 }
 
-std::vector<QPoint3D> Algorithms::generate_Cumulus(uint n)
+std::vector<QPoint3D> Algorithms::generateCumulus(uint n)
 {
     std::vector<QPoint3D> Points;
 
@@ -601,7 +601,7 @@ std::vector<QPoint3D> Algorithms::generate_Cumulus(uint n)
     return Points;
 }
 
-std::vector<QPoint3D> Algorithms::generate_Hillrest(uint n)
+std::vector<QPoint3D> Algorithms::generateHillrest(uint n)
 {
     std::vector<QPoint3D> Points;
 
@@ -643,7 +643,7 @@ std::vector<QPoint3D> Algorithms::generate_Hillrest(uint n)
     return Points;
 }
 
-std::vector<QPoint3D> Algorithms::generate_Valley(uint n)
+std::vector<QPoint3D> Algorithms::generateValley(uint n)
 {
     std::vector<QPoint3D> Points;
 
@@ -685,7 +685,7 @@ std::vector<QPoint3D> Algorithms::generate_Valley(uint n)
      return Points;
 }
 
-std::vector<QPoint3D> Algorithms::generate_Ridge(uint n)
+std::vector<QPoint3D> Algorithms::generateRidge(uint n)
 {
     std::vector<QPoint3D> Points;
 

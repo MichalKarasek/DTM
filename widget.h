@@ -2,6 +2,7 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QErrorMessage>
 #include "edge.h"
 #include "qpoint3d.h"
 #include "qgraphicsscene.h"
@@ -17,14 +18,14 @@ class Widget : public QWidget
 
 public:
 
-    QPoint3D process_line(QString &, bool option = true);
-    void paint_data(std::vector<QPoint3D> &);
-    void paint_triangles(std::vector<Triangle> &);
-    void paint_mask();
-    void process_triangles();
-    void paint_slope();
-    void paint_contour();
-    void paint_exposition();
+    QPoint3D processLine(QString &, bool option = true);
+    void paintData(std::vector<QPoint3D> &);
+    void paintTriangles(std::vector<Triangle> &);
+    void paintMask();
+    void processTriangles();
+    void paintSlope();
+    void paintContour(const int highlight = 5);
+    void paintExposition();
     explicit Widget(QWidget *parent = 0);
     ~Widget();
 
@@ -46,8 +47,8 @@ private slots:
 
 private:
 
-    void clear_scene();
-    void clear_data();
+    void clearScene();
+    void clearData();
 
     //Data structures
     Ui::Widget *ui;

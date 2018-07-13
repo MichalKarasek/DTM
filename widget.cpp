@@ -8,6 +8,7 @@
 #include "sortbyslope.h"
 #include "edge.h"
 #include "sortbyexposition.h"
+#include "inputform.h"
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
@@ -15,6 +16,8 @@ Widget::Widget(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowTitle(tr("DMT generator 1.0"));
+    scene = new QGraphicsScene(this);
+    ui->canvas->setScene(scene);
     ui->openfile->setText(tr("Open file"));
     ui->getExposition->setText(tr("Exposition"));
     ui->getSlope->setText(tr("Slope"));
@@ -22,9 +25,13 @@ Widget::Widget(QWidget *parent) :
     ui->cutbymask->setText(tr("Cut DMT by mask"));
     ui->dmt->setText(tr("Create DMT"));
     ui->generateShape->setText(tr("Generate shape"));
+    ui->pointNum->setToolTip(tr("Number of points to gengerate shape from"));
 
     ui->getExposition->setEnabled(false);
     ui->getSlope->setEnabled(false);
+    ui->createcontour->setEnabled(false);
+    ui->cutbymask->setEnabled(false);
+    ui->dmt->setEnabled(false);
 }
 
 Widget::~Widget()
@@ -35,9 +42,7 @@ Widget::~Widget()
 
 void Widget::on_openfile_clicked()
 {
-    clear_scene();
-    scene = new QGraphicsScene(this);
-    ui->canvas->setScene(scene);
+    clearScene();
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open polygon .txt file"), "", tr("Text files(*.txt);;All Files (*)"));
 
     if(fileName.isEmpty())
@@ -49,7 +54,7 @@ void Widget::on_openfile_clicked()
         QFile file(fileName);
         QTextStream in(&file);
 
-        clear_data();
+        clearData();
 
         // Check if file is open
         if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -66,16 +71,17 @@ void Widget::on_openfile_clicked()
             while(!in.atEnd())
             {
                 QString line = in.readLine();
-                DMT_points.push_back(process_line(line, true));
+                DMT_points.push_back(processLine(line, true));
             }
         }
         file.close();
     }
-    paint_data(DMT_points);
+    paintData(DMT_points);
     minmax = Algorithms::minmaxZ(DMT_points);
+    ui->dmt->setEnabled(true);
 }
 
-QPoint3D Widget::process_line(QString &line, bool option)
+QPoint3D Widget::processLine(QString &line, bool option)
 {
     QString x_cor, y_cor, z_cor;
 
@@ -96,7 +102,7 @@ QPoint3D Widget::process_line(QString &line, bool option)
     }
 }
 
-void Widget::paint_data(std::vector<QPoint3D> &polygon)
+void Widget::paintData(std::vector<QPoint3D> &polygon)
 {
     for(auto &point:polygon)
     {
@@ -104,7 +110,7 @@ void Widget::paint_data(std::vector<QPoint3D> &polygon)
     }
 }
 
-void Widget::paint_mask()
+void Widget::paintMask()
 {
     for(size_t i=0; i < mask.size() -1; ++i)
     {
@@ -112,7 +118,7 @@ void Widget::paint_mask()
     }
 }
 
-void Widget::clear_data()
+void Widget::clearData()
 {
     // Process all data structures and empty them before starting new project
     if(DMT_points.size())
@@ -137,7 +143,7 @@ void Widget::clear_data()
         slope.clear();
 }
 
-void Widget::process_triangles()
+void Widget::processTriangles()
 {
     //std::vector<Triangle>::iterator it = triangles.begin();
     std::vector<Triangle> tr;
@@ -183,12 +189,12 @@ void Widget::process_triangles()
     }
 
     scene->clear();
-    paint_data(DMT_points);
-    paint_triangles(tr);
-    paint_contour();
+    paintData(DMT_points);
+    paintTriangles(tr);
+    paintContour();
 }
 
-void Widget::paint_triangles(std::vector<Triangle> &tr)
+void Widget::paintTriangles(std::vector<Triangle> &tr)
 {
     for(auto &triangle:tr)
     {
@@ -201,16 +207,19 @@ void Widget::paint_triangles(std::vector<Triangle> &tr)
 void Widget::on_dmt_clicked()
 {
     if(triangles.size()) return;
+
     tin = Algorithms::dt(DMT_points);
     triangles = Algorithms::convertDTM(tin);
-    paint_triangles(triangles);
+    paintTriangles(triangles);
 
     //Allow user to create slope and exposition
     ui->getExposition->setEnabled(true);
     ui->getSlope->setEnabled(true);
+    ui->createcontour->setEnabled(true);
+    ui->cutbymask->setEnabled(true);
 }
 
-void Widget::paint_slope()
+void Widget::paintSlope()
 {
     std::sort(triangles.begin(), triangles.end(), sortBySlope());
     std::vector<int> position;
@@ -248,13 +257,14 @@ void Widget::paint_slope()
         }
         polygon.clear();
     }
+    if(contour.size()) paintContour();
 }
 
-void Widget::paint_contour()
+void Widget::paintContour(const int highlight)
 {
     for(auto &edge:contour)
     {
-        if((int)edge.getEnd().getZ()%5 == 0)
+        if((int)edge.getEnd().getZ()%highlight == 0)
         {
             scene->addLine(edge.getStart().getX(), edge.getStart().getY(), edge.getEnd().getX(), edge.getEnd().getY(), QPen(QColor(160,90,30), 3));
         }
@@ -265,7 +275,7 @@ void Widget::paint_contour()
     }
 }
 
-void Widget::paint_exposition()
+void Widget::paintExposition()
 {
     std::sort(triangles.begin(), triangles.end(), SortByExposition());
     std::vector<int> classify = {60, 120, 180, 240, 300, 361};
@@ -289,19 +299,33 @@ void Widget::paint_exposition()
         }
         polygon.clear();
     }
+
+    if(contour.size()) paintContour();
 }
 
-void Widget::clear_scene()
+void Widget::clearScene()
 {
     if(scene)
-        delete scene;
+    {
+        scene->clear();
+    }
 }
 
 void Widget::on_createcontour_clicked()
 {
     if(contour.size()) return;
-    contour = Algorithms::createContours(triangles, minmax.first, minmax.second, 1);
-    paint_contour();
+
+    inputform *inform = new inputform(this);
+    int spacing {};
+    int highlight {};
+
+    if(inform->exec() == QDialog::Accepted)
+    {
+        spacing = inform->getSpacing();
+        highlight = inform->getHighlight();
+        contour = Algorithms::createContours(triangles, minmax.first, minmax.second, spacing);
+        paintContour(highlight);
+    }
 }
 
 void Widget::on_cutbymask_clicked()
@@ -325,17 +349,17 @@ void Widget::on_cutbymask_clicked()
         }
         else
         {
-             // Extract information from file.txt into vector of QPolygonF objects
+            // Extract information from file.txt into vector of QPolygonF objects
             while(!in.atEnd())
             {
                 QString line = in.readLine();
-                mask.push_back(process_line(line, false));
+                mask.push_back(processLine(line, false));
             }
         }
         file.close();
     }
-    paint_mask();
-    process_triangles();
+    paintMask();
+    processTriangles();
 }
 
 void Widget::on_getExposition_clicked()
@@ -344,7 +368,7 @@ void Widget::on_getExposition_clicked()
     {
         triangle.setExposition(Algorithms::getExposition(triangle));
     }
-    paint_exposition();
+    paintExposition();
 }
 
 void Widget::on_getSlope_clicked()
@@ -353,15 +377,13 @@ void Widget::on_getSlope_clicked()
     {
        triangle.setSlope(Algorithms::getSlope(triangle));
     }
-    paint_slope();
+    paintSlope();
 }
 
 void Widget::on_generateShape_clicked()
 {
-    clear_scene();
-    clear_data();
-    scene = new QGraphicsScene(this);
-    ui->canvas->setScene(scene);
+    clearScene();
+    clearData();
     ui->pointNum->setEnabled(true);
     ui->shapes->setEnabled(true);
     int choice = ui->shapes->currentIndex();
@@ -376,28 +398,31 @@ void Widget::on_generateShape_clicked()
         er_message->setAttribute(Qt::WA_DeleteOnClose, true);
 
         ui->pointNum->clear();
+        ui->dmt->setEnabled(false);
+        return;
     }
 
     switch(choice)
     {
         case 0:{
-                DMT_points = Algorithms::generate_Cumulus(points);
+                DMT_points = Algorithms::generateCumulus(points);
                 break;
                 }
         case 1:{
-                DMT_points = Algorithms::generate_Hillrest(points);
+                DMT_points = Algorithms::generateHillrest(points);
                 break;
                 }
         case 2:{
-                DMT_points = Algorithms::generate_Valley(points);
+                DMT_points = Algorithms::generateValley(points);
                 break;
                 }
         case 3:{
-                DMT_points = Algorithms::generate_Ridge(points);
+                DMT_points = Algorithms::generateRidge(points);
                 break;
                 }
     }
 
-    paint_data(DMT_points);
+    paintData(DMT_points);
     minmax = Algorithms::minmaxZ(DMT_points);
+    ui->dmt->setEnabled(true);
 }

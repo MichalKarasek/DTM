@@ -22,10 +22,10 @@ public:
     static double getAngle(QPoint &,QPoint &,QPoint &, QPoint &);
     static QPolygon grahamScan(std::vector<QPoint> &points);
     static bool sortByAngle(QPoint &a, QPoint &b);
-    static std::vector<QPoint3D> generate_Cumulus(uint);
-    static std::vector<QPoint3D> generate_Hillrest(uint);
-    static std::vector<QPoint3D> generate_Valley(uint);
-    static std::vector<QPoint3D> generate_Ridge(uint);
+    static std::vector<QPoint3D> generateCumulus(uint);
+    static std::vector<QPoint3D> generateHillrest(uint);
+    static std::vector<QPoint3D> generateValley(uint);
+    static std::vector<QPoint3D> generateRidge(uint);
     static double distance(QPoint &a, QPoint &b){
 
         double dx = b.x() - a.x();
